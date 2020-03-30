@@ -20,13 +20,13 @@ def traverse_datasets(hdf_file):
 
 def draw2D(hist2d, xtitle, ytitle, ztitle, zmin, zmax, out, log):
     r.gROOT.SetBatch(True)
-    can=r.TCanvas('can_'+str(hist2d))
+    can=r.TCanvas('can_'+str(hist2d.GetName()))
     if log:
         can.SetLogz()
 
-    hist2d.GetXaxis().SetTitle("L-value")
-    hist2d.GetYaxis().SetTitle("pitch [deg]")
-    hist2d.GetZaxis().SetTitle("#LT electron rate#GT [Hz/(cm^{2}#upoint sr)]")
+    hist2d.GetXaxis().SetTitle(xtitle)
+    hist2d.GetYaxis().SetTitle(ytitle)
+    hist2d.GetZaxis().SetTitle(ztitle)
     hist2d.SetMaximum(zmax)
     hist2d.SetMinimum(zmin)
     hist2d.Draw("colz")

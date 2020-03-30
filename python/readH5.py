@@ -24,7 +24,7 @@ for dset in traverse_datasets(f):
     print(dset, f[dset].shape, f[dset].dtype)
     
 dset1 = f['L_parameter']
-dset_lonlat = f['GMLonLat']
+dset_lonlat = f['LonLat']
 dset_en = f['HEPD_ele_energy_table']
 dset_p = f['HEPD_ele_pitch_table']
 dset2 = f['HEPD_ele_energy_pitch']
@@ -68,15 +68,16 @@ for iev,ev in enumerate(dset2):
     time_act = (time_calc-time_max)/60.
     
     hist2D_loc.SetBinContent(int(dset_lonlat[iev][0]+180), int(dset_lonlat[iev][1]+90), float(time_act))
-
+    # loop through energy bins
     for ie,en in enumerate(ev):
+        # loop through pitch
         for ip,count in enumerate(en):
             if iev==1 and ie==0 and ip==0:
                 print("L-value: ", dset1[iev])
                 print("Pitch:   ", dset_p[0][ip])
                 print("Count:   ", count)
                 print("Energy: ", dset_en[0][ie])
-            if count>0: # and dset1[iev]<=10:
+            if count!=0: # and dset1[iev]<=10:
                 oldbin = hist2D.FindBin(dset1[iev], dset_p[0][ip]) 
                 oldCount = hist2D.GetBinContent(oldbin)
                 hist2D.SetBinContent(oldbin, (oldCount+count)/2.)
@@ -87,6 +88,7 @@ for iev,ev in enumerate(dset2):
                 E[0] = dset_en[0][ie]
                 T[0] = time_act
                 
+                # if L-value <=5
                 if dset1[iev]<=5:  
                     # get indices
                     ind_L = int(dset1[iev]*2)
