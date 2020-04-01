@@ -23,12 +23,12 @@ print(list(f.keys()))
 for dset in traverse_datasets(f):
     print(dset, f[dset].shape, f[dset].dtype)
     
-dset1 = f['L_parameter'].value()
-dset_lonlat = f['LonLat'].value()
-dset_en = f['HEPD_ele_energy_table'].value()
-dset_p = f['HEPD_ele_pitch_table'].value()
-dset2 = f['HEPD_ele_energy_pitch'].value()
-dset_time = f['UTCTime'].value()
+dset1 = f['L_parameter'].value
+dset_lonlat = f['LonLat'].value
+dset_en = f['HEPD_ele_energy_table'].value
+dset_p = f['HEPD_ele_pitch_table'].value
+dset2 = f['HEPD_ele_energy_pitch'].value
+dset_time = f['UTCTime'].value
 
 maxEv = len(dset2)
 print("Events: ", maxEv)
