@@ -25,19 +25,19 @@ for dset in traverse_datasets(f):
     print(dset, f[dset].shape, f[dset].dtype)
     
 parameters = dict([('hepd', ['L_parameter', 'HEPD_ele_energy_table', 'HEPD_ele_pitch_table', 'HEPD_ele_energy_pitch', 'UTCTime']),
-                   ('leos', ['L_parameter', 'Energy_Table_Electron', 'PitchAngle', 'A411', 'UTC_TIME']),
+                   ('leos', ['L_parameter', 'Energy_Table_Electron', 'PitchAngle', 'A412', 'UTC_TIME']),
                ])
 lonlat = dict([('hepd', ['LonLat', 'LonLat'] ),
                ('leos', ['GEO_LON', 'GEO_LAT'] )
            ])
 
-dset1 = f[parameters[args.data][0]]
-dset_lon = f[lonlat[args.data][0]]
-dset_lat = f[lonlat[args.data][1]]
-dset_en = f[parameters[args.data][1]]
-dset_p = f[parameters[args.data][2]]
-dset2 = f[parameters[args.data][3]]
-dset_time = f[parameters[args.data][4]]
+dset1 = f[parameters[args.data][0]][()] 
+dset_lon = f[lonlat[args.data][0]][()]
+dset_lat = f[lonlat[args.data][1]][()]
+dset_en = f[parameters[args.data][1]][()]
+dset_p = f[parameters[args.data][2]][()]
+dset2 = f[parameters[args.data][3]][()]
+dset_time = f[parameters[args.data][4]][()]
 
 maxEv = len(dset2)
 print("Events: ", maxEv)
@@ -72,8 +72,8 @@ tree.Branch( 'energy', E, 'energy/F' )
 tree.Branch( 'count', C, 'count/F' )
 tree.Branch( 'time', T, 'time/F' )
 
-    
-hist2D=r.TH2D("hist2D","hist2D",18,1,10,9,10,190)
+# write 2d histograms
+hist2D=r.TH2D("hist2D","hist2D",18,1,10,len(dset_p[0]),np.amin(dset_p[0])-0.5*(dset_p[0][1]-dset_p[0][0]),np.amax(dset_p[0])+0.5*(dset_p[0][8]-dset_p[0][7]))
 hist2D_loc=r.TH2D("hist2D_loc","hist2D_loc",360,1,360,180,-90,90)
 
 for iev,ev in enumerate(dset2):
@@ -81,71 +81,41 @@ for iev,ev in enumerate(dset2):
     if args.data=='hepd':
         time_calc = 60*60*int(str(dset_time[iev])[-6:-4]) + 60*int(str(dset_time[iev])[-4:-2]) + int(str(dset_time[iev])[-2:])
         time_act = (time_calc-time_max)/60.
-
         hist2D_loc.SetBinContent(int(dset_lon[iev][0]+180), int(dset_lat[iev][1]+90), float(time_act))
-        # loop through energy bins
-        for ie,en in enumerate(ev):
-            # loop through pitch
-            for ip,count in enumerate(en):
-                if iev==1 and ie==0 and ip==0:
-                    print("L-value: ", dset1[iev])
-                    print("Pitch:   ", dset_p[0][ip])
-                    print("Count:   ", count)
-                    print("Energy: ", dset_en[0][ie])
-                if count!=0: # and dset1[iev]<=10:
-                    oldbin = hist2D.FindBin(dset1[iev], dset_p[0][ip]) 
-                    oldCount = hist2D.GetBinContent(oldbin)
-                    hist2D.SetBinContent(oldbin, (oldCount+count)/2.)
-                    # fill tree
-                    L[0] = dset1[iev]
-                    P[0] = dset_p[0][ip]
-                    C[0] = count
-                    E[0] = dset_en[0][ie]
-                    T[0] = time_act
-                
-                    # if L-value <=5
-                    if dset1[iev]<=5:  
-                        # get indices
-                        ind_L = int(dset1[iev]*2)
-                        ind_tot = (ind_L-1)*9 + ip
-                        Clist[ind_tot][0] = count
-                    
-                    tree.Fill()
-    
-    # fill tree and histos for LEOS data 
+    # fill tree and histos for LEOS data
     elif args.data=='leos':
         time_calc = 60*60*int(str(dset_time[iev][0])[-6:-4]) + 60*int(str(dset_time[iev][0])[-4:-2]) + int(str(dset_time[iev][0])[-2:])
         time_act = (time_calc-time_max)/60.
-
         hist2D_loc.SetBinContent(int(dset_lon[iev]+180), int(dset_lat[iev]+90), float(time_act))
-        # loop through energy bins
-        for ie,en in enumerate(ev):
-            # loop through pitch
-            for ip,count in enumerate(en):
-                if iev==1 and ie==0 and ip==0:
-                    print("L-value: ", dset1[iev][0])
-                    print("Pitch:   ", dset_p[0][ip])
-                    print("Count:   ", count)
-                    print("Energy: ", dset_en[0][ie])
 
-                if count!=0: 
-                    oldbin = hist2D.FindBin(dset1[iev], dset_p[0][ip])
-                    oldCount = hist2D.GetBinContent(oldbin)
-                    hist2D.SetBinContent(oldbin, (oldCount+count)/2.)
-                    # fill tree 
-                    L[0] = dset1[iev]
-                    P[0] = dset_p[0][ip]
-                    C[0] = count
-                    E[0] = dset_en[0][ie]
-                    T[0] = time_act
-
-                    if dset1[iev]<=5:
-                        # get indices
-                        ind_L = int(dset1[iev]*2)
-                        ind_tot = (ind_L-1)*9 + ip
-                        Clist[ind_tot][0] = count
-
-                    tree.Fill()
+    # loop through energy bins
+    for ie,en in enumerate(ev):
+        # loop through pitch
+        for ip,count in enumerate(en):
+            if iev==1 and ie==0 and ip==0:
+                print("L-value: ", dset1[iev])
+                print("Pitch:   ", dset_p[0][ip])
+                print("Count:   ", count)
+                print("Energy: ", dset_en[0][ie])
+            if count!=0: # and dset1[iev]<=10:
+                oldbin = hist2D.FindBin(dset1[iev], dset_p[0][ip]) 
+                oldCount = hist2D.GetBinContent(oldbin)
+                hist2D.SetBinContent(oldbin, (oldCount+count)/2.)
+                # fill tree
+                L[0] = dset1[iev]
+                P[0] = dset_p[0][ip]
+                C[0] = count
+                E[0] = dset_en[0][ie]
+                T[0] = time_act
+                
+                # if L-value <=5
+                if dset1[iev]<=5:  
+                    # get indices
+                    ind_L = int(dset1[iev]*2)
+                    ind_tot = (ind_L-1)*9 + ip
+                    Clist[ind_tot][0] = count
+                    
+                tree.Fill()    
                         
 outpdf = os.path.split(filename)[1]
 outpdf = outpdf.replace("h5","pdf")
