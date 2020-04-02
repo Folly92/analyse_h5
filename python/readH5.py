@@ -11,6 +11,7 @@ r.gStyle.SetPadRightMargin(0.2)
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--inputFile', type=str, help='Define patht to data file.')
+parser.add_argument('--data', type=str, choices=['hepd','leos'], required=True, help='Define patht to data file.')
 
 args,_=parser.parse_known_args()
 
@@ -23,16 +24,28 @@ print(list(f.keys()))
 for dset in traverse_datasets(f):
     print(dset, f[dset].shape, f[dset].dtype)
     
-dset1 = f['L_parameter'].value
-dset_lonlat = f['LonLat'].value
-dset_en = f['HEPD_ele_energy_table'].value
-dset_p = f['HEPD_ele_pitch_table'].value
-dset2 = f['HEPD_ele_energy_pitch'].value
-dset_time = f['UTCTime'].value
+parameters = dict([('hepd', ['L_parameter', 'HEPD_ele_energy_table', 'HEPD_ele_pitch_table', 'HEPD_ele_energy_pitch', 'UTCTime']),
+                   ('leos', ['L_parameter', 'Energy_Table_Electron', 'PitchAngle', 'A412', 'UTC_TIME']),
+               ])
+lonlat = dict([('hepd', ['LonLat', 'LonLat'] ),
+               ('leos', ['GEO_LON', 'GEO_LAT'] )
+           ])
+
+dset1 = f[parameters[args.data][0]][()] 
+dset_lon = f[lonlat[args.data][0]][()]
+dset_lat = f[lonlat[args.data][1]][()]
+dset_en = f[parameters[args.data][1]][()]
+dset_p = f[parameters[args.data][2]][()]
+dset2 = f[parameters[args.data][3]][()]
+dset_time = f[parameters[args.data][4]][()]
 
 maxEv = len(dset2)
 print("Events: ", maxEv)
-time_max = int(str(dset_time[0])[-6:-4])*60*60 +  int(str(dset_time[0])[-4:-2])*60 +  int(str(dset_time[0])[-2:])
+
+time_blanc = dset_time[0]
+if args.data=='leos':
+    time_blanc = dset_time[0][0]
+time_max = int(str(time_blanc)[-6:-4])*60*60 +  int(str(time_blanc)[-4:-2])*60 +  int(str(time_blanc)[-2:])
 
 # prepare root output                            
 outRootName = os.path.split(filename)[1].replace("h5","root")
@@ -59,15 +72,22 @@ tree.Branch( 'energy', E, 'energy/F' )
 tree.Branch( 'count', C, 'count/F' )
 tree.Branch( 'time', T, 'time/F' )
 
-    
-hist2D=r.TH2D("hist2D","hist2D",18,1,10,9,10,190)
+# write 2d histograms
+hist2D=r.TH2D("hist2D","hist2D",18,1,10,len(dset_p[0]),np.amin(dset_p[0])-0.5*(dset_p[0][1]-dset_p[0][0]),np.amax(dset_p[0])+0.5*(dset_p[0][8]-dset_p[0][7]))
 hist2D_loc=r.TH2D("hist2D_loc","hist2D_loc",360,1,360,180,-90,90)
 
 for iev,ev in enumerate(dset2):
-    time_calc = 60*60*int(str(dset_time[iev])[-6:-4]) + 60*int(str(dset_time[iev])[-4:-2]) + int(str(dset_time[iev])[-2:])
-    time_act = (time_calc-time_max)/60.
-    
-    hist2D_loc.SetBinContent(int(dset_lonlat[iev][0]+180), int(dset_lonlat[iev][1]+90), float(time_act))
+    # fill tree and histograms for HEPD data
+    if args.data=='hepd':
+        time_calc = 60*60*int(str(dset_time[iev])[-6:-4]) + 60*int(str(dset_time[iev])[-4:-2]) + int(str(dset_time[iev])[-2:])
+        time_act = (time_calc-time_max)/60.
+        hist2D_loc.SetBinContent(int(dset_lon[iev][0]+180), int(dset_lat[iev][1]+90), float(time_act))
+    # fill tree and histos for LEOS data
+    elif args.data=='leos':
+        time_calc = 60*60*int(str(dset_time[iev][0])[-6:-4]) + 60*int(str(dset_time[iev][0])[-4:-2]) + int(str(dset_time[iev][0])[-2:])
+        time_act = (time_calc-time_max)/60.
+        hist2D_loc.SetBinContent(int(dset_lon[iev]+180), int(dset_lat[iev]+90), float(time_act))
+
     # loop through energy bins
     for ie,en in enumerate(ev):
         # loop through pitch
@@ -95,9 +115,8 @@ for iev,ev in enumerate(dset2):
                     ind_tot = (ind_L-1)*9 + ip
                     Clist[ind_tot][0] = count
                     
-                tree.Fill()
-                
-
+                tree.Fill()    
+                        
 outpdf = os.path.split(filename)[1]
 outpdf = outpdf.replace("h5","pdf")
 outpdf = outpdf.replace("CSES_HEP","map")
